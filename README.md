@@ -1,2 +1,2 @@
 # HNGx-Internship
-Intership program
+Internship program
