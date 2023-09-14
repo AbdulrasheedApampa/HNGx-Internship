@@ -9,7 +9,7 @@ The project's entry point is app.py.
 
 ## **API Documentation**
 
-The API is fully documented, and can be found [here](https://documenter.getpostman.com/view/29597896/2s9YC4VtXE).
+The API is fully documented, and can be found [here](https://documenter.getpostman.com/view/28354999/2s9YC5xs8W).
 
 ## UML Diagram
 
@@ -18,7 +18,7 @@ The API is fully documented, and can be found [here](https://documenter.getpostm
 ## Testing
 
 Unit tests/feature tests were not part of the requirements, but from the API docs in the link above, you will be able to test it on Postman.
-The API is deployed to [robinsonuche.onrender.com](https://robinsonuche.onrender.com/api)
+The API is deployed to [http://apampaabdulrasheed16.pythonanywhere.com/api)
 
 ## **Known Limitations and Assumptions**
 
@@ -34,7 +34,7 @@ Error responses are standardized but can be further customized to meet specific 
 * Activate your virtual environment
   ```source ~/venv/bin/activate```
 * Clone this repository.
-  ```git clone https://github.com/Rob-in-son/HNG.git```
+  ```https://github.com/AbdulrasheedApampa/HNGx-Internship.git```
 * Get into the repository directory
   ```cd stage2```
 * Install the required dependencies listed in requirements.txt.
