@@ -1,91 +1,103 @@
-from flask import Flask
-from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
-from flask_sqlalchemy import SQLAlchemy
+import os
+import sqlite3
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-api = Api(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-db = SQLAlchemy(app)
 
-# Uncomment the following line to initialize the database
-db.create_all()  # Create the database tables
+# Check if the database file exists; if not, create it
+if not os.path.isfile('database.db'):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
 
-# Define the UserModel representing a user in the database
-class UserModel(db.Model):
-    id = db.Column(db.String, primary_key=True)  # Changed to db.String for id
-    name = db.Column(db.String(100), nullable=False)
-    age = db.Column(db.Integer, nullable=False)
+    # Create a persons table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS persons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            email TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+else:
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
 
-    def __repr__(self):
-        return f"User(name={self.name}, age={self.age})"
+@app.route('/api', methods=['POST'])
+def create_person():
+    data = request.json
 
-# Define request parsers for input validation
-user_put_args = reqparse.RequestParser()
-user_put_args.add_argument("name", type=str, help="Name of the user is required", required=True)
-user_put_args.add_argument("age", type=int, help="Age of the user is required", required=True)
+    if not data:
+        return jsonify({"error": "Invalid request data"}), 400
 
-user_update_args = reqparse.RequestParser()
-user_update_args.add_argument("name", type=str, help="Name of the user")
-user_update_args.add_argument("age", type=int, help="Age of the user")
+    # Ensure that the request contains necessary data (e.g., 'name', 'age', 'email')
+    required_fields = ['name', 'age', 'email']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing field: {field}"}), 400
 
-# Define resource fields for response formatting
-resource_fields = {
-    'id': fields.String,  # Changed to fields.String for id
-    'name': fields.String,
-    'age': fields.Integer
-}
+    # Insert a new person into the database
+    cursor.execute('''
+        INSERT INTO persons (name, age, email)
+        VALUES (?, ?, ?)
+    ''', (data["name"], data["age"], data["email"]))
+    conn.commit()
 
-# Define the User resource
-class User(Resource):
-    @marshal_with(resource_fields)
-    def get(self, user_id):
-        # Retrieve a user by ID or return a 404 error if not found
-        result = UserModel.query.filter_by(id=user_id).first()
-        if not result:
-            abort(404, message="Could not find user with that id")
-        return result
+    return jsonify({"message": "Person created successfully"}), 201
 
-    @marshal_with(resource_fields)
-    def put(self, user_id):
-        args = user_put_args.parse_args()
-        # Check if the user ID already exists and return a 409 conflict error if it does
-        if UserModel.query.filter_by(id=user_id).first():
-            abort(409, message="User id taken...")
+@app.route('/api/<int:user_id>', methods=['GET'])
+def get_person(user_id):
+    cursor.execute('SELECT * FROM persons WHERE id = ?', (user_id,))
+    person = cursor.fetchone()
 
-        # Create a new user and add it to the database
-        user = UserModel(id=user_id, name=args['name'], age=args['age'])
-        db.session.add(user)
-        db.session.commit()
-        return user, 201
+    if person is None:
+        return jsonify({"error": "Person not found"}), 404
 
-    @marshal_with(resource_fields)
-    def patch(self, user_id):
-        args = user_update_args.parse_args()
-        result = UserModel.query.filter_by(id=user_id).first()
-        if not result:
-            abort(404, message="User doesn't exist, cannot update")
+    person_info = {
+        "id": person[0],
+        "name": person[1],
+        "age": person[2],
+        "email": person[3]
+    }
 
-        # Update user attributes if provided in the request
-        if args['name']:
-            result.name = args['name']
-        if args['age']:
-            result.age = args['age']
+    return jsonify(person_info)
 
-        db.session.commit()
-        return result
+@app.route('/api/<int:user_id>', methods=['PUT'])
+def update_person(user_id):
+    data = request.json
 
-    def delete(self, user_id):
-        result = UserModel.query.filter_by(id=user_id).first()
-        if not result:
-            abort(404, message="User doesn't exist, cannot delete")
+    if not data:
+        return jsonify({"error": "Invalid request data"}), 400
 
-        # Delete the user from the database
-        db.session.delete(result)
-        db.session.commit()
-        return {'message': 'User deleted'}, 204
+    cursor.execute('SELECT * FROM persons WHERE id = ?', (user_id,))
+    person = cursor.fetchone()
 
-# Add the User resource with a route that includes the user_id parameter
-api.add_resource(User, "/api/<string:user_id>")
+    if person is None:
+        return jsonify({"error": "Person not found"}), 404
 
-if __name__ == "__main__":
+    # Update the person's details in the database
+    cursor.execute('''
+        UPDATE persons
+        SET name = ?, age = ?, email = ?
+        WHERE id = ?
+    ''', (data["name"], data["age"], data["email"], user_id))
+    conn.commit()
+
+    return jsonify({"message": "Person updated successfully"}), 200
+
+@app.route('/api/<int:user_id>', methods=['DELETE'])
+def delete_person(user_id):
+    cursor.execute('SELECT * FROM persons WHERE id = ?', (user_id,))
+    person = cursor.fetchone()
+
+    if person is None:
+        return jsonify({"error": "Person not found"}), 404
+
+    # Delete the person from the database
+    cursor.execute('DELETE FROM persons WHERE id = ?', (user_id,))
+    conn.commit()
+
+    return jsonify({"message": "Person deleted successfully"}), 200
+
+if __name__ == '__main__':
     app.run(debug=True)

@@ -1,52 +1,66 @@
 import requests
 
-base_url = 'http://apampaabdulrasheed16.pythonanywhere.com/'  # Change this if your Flask app is running on a different address or port
+# Set the base URL for your API
+base_url = 'http://apampaabdulrasheed16.pythonanywhere.com/'  # Change the URL if your API is hosted elsewhere
 
-# Function to send a GET request to retrieve a user by ID
-def get_user(user_id):
-    response = requests.get(f'{base_url}/api/{user_id}')
+# Test data for creating a new person
+new_person_data = {
+    "name": "Rasheed Apampa",
+    "age": 15,
+    "email": "apampaabdulrasheed16@gmail.com"
+}
+
+# Function to send a POST request to create a new person
+def create_person(data):
+    response = requests.post(f"{base_url}/api", json=data)
     return response
 
-# Function to send a POST request to create a new user
-def create_user(user_id, name, age):
-    data = {
-        'name': name,
-        'age': age
-    }
-    response = requests.post(f'{base_url}/api/{user_id}', json=data)
+# Function to send a GET request to retrieve a person by ID
+def get_person(user_id):
+    response = requests.get(f"{base_url}/api/{user_id}")
     return response
 
-# Function to send a PATCH request to update an existing user
-def update_user(user_id, name=None, age=None):
-    data = {}
-    if name is not None:
-        data['name'] = name
-    if age is not None:
-        data['age'] = age
-    response = requests.patch(f'{base_url}/api/{user_id}', json=data)
+# Function to send a PUT request to update a person by ID
+def update_person(user_id, data):
+    response = requests.put(f"{base_url}/api/{user_id}", json=data)
     return response
 
-# Function to send a DELETE request to delete a user by ID
-def delete_user(user_id):
-    response = requests.delete(f'{base_url}/api/{user_id}')
+# Function to send a DELETE request to delete a person by ID
+def delete_person(user_id):
+    response = requests.delete(f"{base_url}/api/{user_id}")
     return response
 
-# Test cases
+# Testing the API endpoints
 if __name__ == '__main__':
-    # Create a new user
-    create_response = create_user('1', 'John', 30)
-    print(create_response.status_code)  # Expecting 201 for created
+    # Create a new person
+    create_response = create_person(new_person_data)
+    print("Create Response:")
+    print(create_response.json())
+    
+    # Retrieve all persons to find the newly created person's ID
+    get_all_response = requests.get(f"{base_url}/api")
+    all_persons = get_all_response.json()
+    created_person_id = len(all_persons) - 1  # Index of the newly created person
+    
+    if created_person_id >= 0:
+        # Retrieve the newly created person by ID
+        get_response = get_person(created_person_id)
+        print("Get Response:")
+        print(get_response.json())
 
-    # Retrieve the created user
-    get_response = get_user('1')
-    print(get_response.status_code)  # Expecting 200 for success
-    print(get_response.json())
+        # Update the person's information
+        updated_data = {
+            "name": "Rasheed Apampa Updated",
+            "age": 31,
+            "email": "rasheedupdated@example.com"
+        }
+        update_response = update_person(created_person_id, updated_data)
+        print("Update Response:")
+        print(update_response.json())
 
-    # Update the user's age
-    update_response = update_user('1', age=31)
-    print(update_response.status_code)  # Expecting 200 for success
-    print(update_response.json())
-
-    # Delete the user
-    delete_response = delete_user('1')
-    print(delete_response.status_code)  # Expecting 204 for no content
+        # Delete the person
+        delete_response = delete_person(created_person_id)
+        print("Delete Response:")
+        print(delete_response.json())
+    else:
+        print("Error: Could not retrieve the newly created person's ID.")
